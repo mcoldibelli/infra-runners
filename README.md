@@ -17,22 +17,23 @@ This project automates runner provisioning so that adding a runner for a new rep
 
 The target LXC container must be prepared before running the playbooks:
 1. **Enable TUN device** on the Proxmox host (Required for Tailscale):
-```
+```bash
   echo "lxc.cgroup2.devices.allow: c 10:200 rwm" >> /etc/pve/lxc/<ID>.conf
   echo "lxc.mount.entry: /dev/net dev/net none bind,create=dir" >> /etc/pve/lxc/<ID>.conf
   pct restart <ID>
 ```
 2. Install and start Tailscale inside the LXC:
-```
+```bash
   curl -fsSL https://tailscale.com/install.sh | sh
   tailscaled --state=/var/lib/tailscale/tailscaled.state &
   tailscale up
 ▎ Note: LXC containers don't run systemd by default, so tailscaled must be started manually or via a startup script.
 ```
-3. Configure the runner user with passwordless sudo:
-```
+3. **Configure the `runner` user** with passwordless sudo:
+```bash
   echo "runner ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/runner
   chmod 440 /etc/sudoers.d/runner
+▎ Security Note:  NOPASSWD:ALL is required because Ansible performs diverse operations as root (apt, systemctl, file permissions, etc...). This is acceptable here because the LXC is isolated, accessible only via Tailscale, and not exposed to the internet. If your threat model requires further restriction, consider using a dedicated ansible user separate from the runner process user.
 ```
 4. Add your SSH public key to the runner user:
 ```
