@@ -9,14 +9,15 @@
     state: present
     update_cache: true
 
-- name: Add GPG key to Adoptium
-  ansible.builtin.apt_key:
+- name: Download Adoptium GPG key
+  ansible.builtin.get_url:
     url: https://packages.adoptium.net/artifactory/api/gpg/key/public
-    state: present
+    dest: /usr/share/keyrings/adoptium.asc
+    mode: "0644"
 
 - name: Add Adoptium repository
   ansible.builtin.apt_repository:
-    repo: "deb https://packages.adoptium.net/artifactory/deb jammy main"
+    repo: "deb [signed-by=/usr/share/keyrings/adoptium.asc] https://packages.adoptium.net/artifactory/deb jammy main"
     state: present
 
 - name: Install Temurin JDK {{ java_version }}
@@ -34,14 +35,15 @@
 - name: Install Docker
   when: docker_check.rc != 0
   block:
-    - name: Add GPG key to Docker
-      ansible.builtin.apt_key:
+    - name: Download Docker GPG key
+      ansible.builtin.get_url:
         url: https://download.docker.com/linux/ubuntu/gpg
-        state: present
+        dest: /usr/share/keyrings/docker.asc
+        mode: "0644"
 
     - name: Add Docker repository
       ansible.builtin.apt_repository:
-        repo: "deb https://download.docker.com/linux/ubuntu jammy stable"
+        repo: "deb [signed-by=/usr/share/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
         state: present
 
     - name: Install Docker Engine
