@@ -1,0 +1,11 @@
+runner_version: "2.322.0"
+runner_arch: "x64"
+runner_user: "runner"
+runner_base_dir: "/home/{{ runner_user }}"
+
+runner_default_labels:
+  - self-hosted
+  - linux
+  - x64
+
+java_version: "21"

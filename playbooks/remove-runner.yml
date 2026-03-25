@@ -1,0 +1,53 @@
+- name: Remove GitHub Action self-hosted runner
+  hosts: github-runner
+  become: true
+
+  vars:
+    runner_user: "runner"
+    runner_dir: "/home/{{ runner_user }}/actions-runner-{{ runner_name }}"
+
+  pre_tasks:
+    - name: Validate required parameters
+      ansible.builtin.assert:
+        that:
+          - runner_name is defined
+          - github_token is defined
+        fail_msg: >
+         Required parameters missing.
+         Use: ansible-playbook playbooks/remove-runner.yml
+         -e "runner_name=RUNNER_NAME"
+         -e "github_token=TOKEN"
+    
+    - name: Verify if runner directory exists
+      ansible.builtin.stat:
+        path: "{{ runner_dir }}"
+      register: runner_exists
+  
+    - name: Fail if runner not found
+      ansible.builtin.fail:
+        msg: "Runner '{{ runner_name }}' não encontrado em {{ runner_dir }}"
+      when: not runner_exists.stat.exists
+  
+  tasks:
+    - name: Stop runner service
+      ansible.builtin.command: ./svc.sh stop
+      args:
+        chdir: "{{ runner_dir }}"
+      failed_when: false
+
+    - name: Uninstall service
+      ansible.builtin.command: ./svc.sh uninstall
+      args:
+        chdir: "{{ runner_dir }}"
+      failed_when: false
+    
+    - name: Unregister GitHub runner
+      ansible.builtin.command: ./config.sh remove --token {{ github_token }}
+      args:
+        chdir: "{{ runner_dir }}"
+      become_user: "{{ runner_user }}"
+
+    - name: Remove runner directory
+      ansible.builtin.file:
+        path: "{{ runner_dir }}"
+        state: absent

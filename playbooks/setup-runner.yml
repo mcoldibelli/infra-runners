@@ -1,0 +1,19 @@
+- name: Setup GitHub Actions self-hosted runner
+  hosts: github-runner
+  become: true
+
+  pre_tasks:
+    - name: Validate required parameters
+      ansible.builtin.assert:
+        that:
+          - repo_name is defined
+          - runner_name is defined
+          - github_token is defined
+        fail_msg: >
+          Required parameters missing.
+          Use: ansible-playbook playbooks/setup-runner.yml
+          -e "repo_name=YOUR_USERNAME/REPOSITORY"
+          -e "runner_name=RUNNER_NAME"
+          -e "github_token=TOKEN"
+  roles:
+    - github-runner

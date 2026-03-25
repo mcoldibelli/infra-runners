@@ -1,0 +1,122 @@
+- name: Install system dependencies
+  ansible.builtin.apt:
+    name:
+      - curl
+      - jq
+      - git
+      - unzip
+    state: present
+    update_cache: true
+
+- name: Add GPG key to Adoptium
+  ansible.builtin.apt_key:
+  url: https://packages.adoptium.net/artifactory/api/gpg/key/public
+  state: present
+
+- name: Add Adoptium repository
+  ansible.builtin.apt_repository:
+    repo: "deb https://packages.adoptium.net/artifactory/deb jammy main"
+    state: present
+
+- name: Install Temurin JDK {{ java_version }}
+  ansible.builtin.apt:
+    name: "temurin-{{ java_version }}-jdk"
+    state: present
+    update_cache: true
+
+- name: Verify if Docker is installed
+  ansible.builtin.command: docker --version
+  register: docker_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Docker
+  when: docker_check.rc != 0
+  block:
+    - name: Add GPG key to Docker
+      ansible.builtin.apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+
+    - name: Add Docker repository
+      ansible.builtin.apt_repository:
+        repo: "deb https://download.docker.com/linux/ubuntu jammy stable"
+        state: present
+
+    - name: Install Docker Engine
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+        state: present
+        update_cache: true
+
+- name: Add user {{ runner_user }} to docker group
+  ansible.builtin.user:
+    name: "{{ runner_user }}"
+    groups: docker
+    append: true
+
+- name: Assure Docker is running
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Setup runner to {{ repo_name }}
+  become_user: "{{ runner_user }}"
+  vars:
+    runner_dir: "{{ runner_base_dir }}/actions-runner-{{ runner_name }}"
+    runner_url: "https://github.com/actions/runner/releases/download/v{{ runner_version }}/actions-runner-linux-{{ runner_arch }}-{{ runner_version }}.tar.gz"
+  block:
+    - name: Create runner directory
+      ansible.builtin.file:
+        path: "{{ runner_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Downloads GitHub Actions Runner v{{ runner_version }}
+      ansible.builtin.unarchive:
+        src: "{{ runner_url }}"
+        dest: "{{ runner_dir }}"
+        remote_src: true
+        creates: "{{ runner_dir }}/config.sh"
+    
+    - name: Verify if runner is already configured
+      ansible.builtin.stat:
+        path: "{{ runner_dir }}/.runner"
+      register: runner_configured
+    
+    - name: Register runner to repository
+      ansible.builtin.command: >
+            ./config.sh
+            --url https://github.com/{{ repo_name }}
+            --token {{ github_token }}
+            --name {{ runner_name }}
+            --labels {{ (runner_default_labels + (runner_extra_labels | default([]))) | join(',') }}
+            --unattended
+            --replace
+      args:
+        chdir: "{{ runner_dir }}"
+      when: not runner_configured.stat.exists
+
+- name: Verify if service already exists
+  ansible.builtin.stat:
+    path: "{{ runner_base_dir }}/actions-runner-{{ runner_name }}/.service"
+  register: svc_installed
+
+- name: Install runner as systemd service
+  ansible.builtin.command: ./svc.sh install {{ runner_user }}
+  args:
+    chdir: "{{ runner_base_dir }}/actions-runner-{{ runner_name }}"
+  when: not svc_installed.stat.exists
+
+- name: Initialize runner service
+  ansible.builtin.command: ./svc.sh start
+  args:
+      chdir: "{{ runner_base_dir }}/actions-runner-{{ runner_name }}"
+  register: svc_start
+  changed_when: "'started' in svc_start.stdout"
+  failed_when: false
