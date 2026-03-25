@@ -1,5 +1,6 @@
 runner_version: "2.322.0"
 runner_arch: "x64"
+runner_checksum: "sha256:b13b784808359f31bc79b08a191f5f83757852957dd8fe3dbfcc38202ccf5768"
 runner_user: "runner"
 runner_base_dir: "/home/{{ runner_user }}"
 

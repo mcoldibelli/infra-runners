@@ -81,8 +81,16 @@
         mode: "0755"
 
     - name: Downloads GitHub Actions Runner v{{ runner_version }}
+      ansible.builtin.get_url:
+        url: "{{ runner_url }}"
+        dest: "{{ runner_dir }}/actions-runner.tar.gz"
+        checksum: "{{ runner_checksum }}"
+        mode: "0644"
+      register: runner_download
+    
+    - name: Extract GitHub Actions Runner
       ansible.builtin.unarchive:
-        src: "{{ runner_url }}"
+        src: "{{ runner_dir }}/actions-runner.tar.gz"
         dest: "{{ runner_dir }}"
         remote_src: true
         creates: "{{ runner_dir }}/config.sh"
