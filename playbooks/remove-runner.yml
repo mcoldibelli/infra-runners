@@ -46,6 +46,7 @@
       args:
         chdir: "{{ runner_dir }}"
       become_user: "{{ runner_user }}"
+      no_log: true
 
     - name: Remove runner directory
       ansible.builtin.file:

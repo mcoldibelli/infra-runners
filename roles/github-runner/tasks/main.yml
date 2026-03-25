@@ -102,6 +102,7 @@
       args:
         chdir: "{{ runner_dir }}"
       when: not runner_configured.stat.exists
+      no_log: true
 
 - name: Verify if service already exists
   ansible.builtin.stat:
