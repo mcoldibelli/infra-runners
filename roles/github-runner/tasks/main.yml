@@ -10,8 +10,8 @@
 
 - name: Add GPG key to Adoptium
   ansible.builtin.apt_key:
-  url: https://packages.adoptium.net/artifactory/api/gpg/key/public
-  state: present
+    url: https://packages.adoptium.net/artifactory/api/gpg/key/public
+    state: present
 
 - name: Add Adoptium repository
   ansible.builtin.apt_repository:
@@ -35,8 +35,8 @@
   block:
     - name: Add GPG key to Docker
       ansible.builtin.apt_key:
-      url: https://download.docker.com/linux/ubuntu/gpg
-      state: present
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
 
     - name: Add Docker repository
       ansible.builtin.apt_repository:
