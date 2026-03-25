@@ -5,6 +5,7 @@
       - jq
       - git
       - unzip
+      - gnupg
     state: present
     update_cache: true
 
